@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Minus,
   Plus,
+  Share2,
   ShoppingCart,
 } from "lucide-react";
 import Layout from "@/components/Layout";
@@ -14,10 +15,35 @@ import SizeGuideModal from "@/components/SizeGuideModal";
 import { useProduct } from "@/hooks/useProducts";
 import { categories } from "@/data/products";
 import { useCart } from "@/context/CartContext";
+import { setPageMeta } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 function formatPrice(n: number) {
   return "R$ " + n.toFixed(2).replace(".", ",");
+}
+
+async function shareProduct(productName: string, url: string) {
+  const text = `Olha esse produto da Vince Kids:\n${productName}\n${url}`;
+
+  // 1. Mobile: tenta share sheet nativa
+  if (typeof navigator.share === "function") {
+    try {
+      await navigator.share({ title: productName, text: productName, url });
+      return "shared";
+    } catch {
+      // user cancelou ou falhou — segue pro plan B
+    }
+  }
+
+  // 2. Copia link no clipboard
+  try {
+    await navigator.clipboard.writeText(url);
+    return "copied";
+  } catch {
+    // 3. Último recurso: abre WhatsApp Web sem número (deixa escolher o contato)
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    return "whatsapp";
+  }
 }
 
 export default function Produto() {
@@ -33,6 +59,17 @@ export default function Produto() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+
+  // SEO dinâmico
+  useEffect(() => {
+    if (product) {
+      setPageMeta(product.name, product.description);
+    } else {
+      setPageMeta();
+    }
+    return () => setPageMeta();
+  }, [product]);
 
   // reseta ao trocar de produto
   useEffect(() => {
@@ -40,6 +77,7 @@ export default function Produto() {
     setSelectedSize(null);
     setQty(1);
     setJustAdded(false);
+    setShareFeedback(null);
   }, [params.id]);
 
   if (!product) {
@@ -78,10 +116,18 @@ export default function Produto() {
     setTimeout(() => setJustAdded(false), 1500);
   };
 
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const result = await shareProduct(product.name, url);
+    if (result === "copied") {
+      setShareFeedback("Link copiado!");
+      setTimeout(() => setShareFeedback(null), 2500);
+    }
+  };
+
   return (
     <Layout>
       <div className="container mx-auto px-4 pt-6 sm:pt-8">
-        {/* breadcrumb */}
         <nav className="flex items-center text-xs sm:text-sm text-muted-foreground gap-1 flex-wrap">
           <Link href="/">
             <span className="hover:text-primary cursor-pointer">Início</span>
@@ -124,6 +170,19 @@ export default function Produto() {
                 <span className="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow">
                   Novo
                 </span>
+              )}
+              <button
+                onClick={handleShare}
+                className="absolute top-4 right-4 bg-white/95 hover:bg-white p-2.5 rounded-full shadow-md text-primary hover:text-primary/80 transition"
+                aria-label="Compartilhar produto"
+                title="Compartilhar"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+              {shareFeedback && (
+                <div className="absolute top-16 right-4 bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-fade-in-up">
+                  {shareFeedback}
+                </div>
               )}
             </div>
             {gallery.length > 1 && (
@@ -176,7 +235,7 @@ export default function Produto() {
               </div>
               {product.sizes.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Tamanhos não cadastrados. Consulte pelo Instagram.
+                  Tamanhos não cadastrados. Consulte pelo WhatsApp.
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -268,6 +327,15 @@ export default function Produto() {
                 )}
               </Button>
             </div>
+
+            {/* COMPARTILHAR */}
+            <button
+              onClick={handleShare}
+              className="mt-3 inline-flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary font-bold"
+            >
+              <Share2 className="h-4 w-4" />
+              Compartilhar este produto
+            </button>
 
             {/* DETALHES */}
             {product.details && product.details.length > 0 && (
