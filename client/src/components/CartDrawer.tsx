@@ -15,7 +15,11 @@ import { Button } from "@/components/ui/button";
 import { useCart, type CartItem } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
 
-const INSTAGRAM_DM_URL = "https://www.instagram.com/direct/t/17842232904650748/";
+// Perfil público da Vince Kids no Instagram.
+// Usamos o perfil em vez do link /direct/t/... porque o link de DM
+// só funciona pra quem já tem conversa aberta com a conta.
+// No perfil, qualquer pessoa toca em "Mensagem" e abre o DM.
+const INSTAGRAM_PROFILE_URL = "https://www.instagram.com/vince_kids/";
 
 function formatPrice(n: number) {
   return "R$ " + n.toFixed(2).replace(".", ",");
@@ -72,7 +76,6 @@ export default function CartDrawer() {
   const message = buildOrderMessage(items, total);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // reset estado ao fechar
   useEffect(() => {
     if (!showCheckout) setCopied(false);
   }, [showCheckout]);
@@ -83,15 +86,13 @@ export default function CartDrawer() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } else {
-      // se nem o fallback funcionar, seleciona o texto pro usuário copiar manual
       textareaRef.current?.select();
     }
   };
 
   const handleOpenInstagram = async () => {
-    // garante que copia antes de abrir
     await copyToClipboard(message);
-    window.open(INSTAGRAM_DM_URL, "_blank", "noopener");
+    window.open(INSTAGRAM_PROFILE_URL, "_blank", "noopener");
   };
 
   return (
@@ -219,7 +220,7 @@ export default function CartDrawer() {
         </aside>
       </div>
 
-      {/* Modal de checkout: mostra a mensagem pra copiar */}
+      {/* Modal de checkout */}
       <div
         className={cn(
           "fixed inset-0 z-[80] flex items-end sm:items-center justify-center transition-opacity",
@@ -298,17 +299,18 @@ export default function CartDrawer() {
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
                   2
                 </span>
-                <span className="font-bold text-foreground">Abra o Instagram e cole no chat</span>
+                <span className="font-bold text-foreground">Abra o perfil e mande mensagem</span>
               </div>
               <Button
                 onClick={handleOpenInstagram}
                 className="w-full rounded-full h-12 font-bold text-base bg-gradient-to-r from-[#E1306C] via-[#C13584] to-[#833AB4] text-white hover:opacity-90"
               >
                 <Instagram className="h-5 w-5" />
-                Abrir DM da Vince Kids
+                Abrir perfil @vince_kids
               </Button>
-              <p className="text-[11px] text-muted-foreground text-center mt-2">
-                No chat, toque longo no campo de texto e escolha <b>Colar</b>.
+              <p className="text-[11px] text-muted-foreground text-center mt-2 leading-relaxed">
+                No perfil, toque em <b>Mensagem</b>. No campo de texto, toque longo e escolha{" "}
+                <b>Colar</b>.
               </p>
             </div>
           </div>
