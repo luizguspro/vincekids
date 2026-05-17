@@ -11,12 +11,6 @@ function formatPrice(n: number) {
   return "R$ " + n.toFixed(2).replace(".", ",");
 }
 
-function isMobileDevice() {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent || "";
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-}
-
 function buildOrderMessage(items: CartItem[], total: number) {
   const blocks = items.map((i) =>
     [
@@ -44,7 +38,6 @@ async function copyToClipboard(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // fallback antigo via textarea
     try {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -69,17 +62,7 @@ export default function CartDrawer() {
   const handleCheckout = async () => {
     const msg = buildOrderMessage(items, total);
 
-    // 1) Mobile: tenta Web Share (abre share sheet com Instagram disponível)
-    if (isMobileDevice() && typeof navigator.share === "function") {
-      try {
-        await navigator.share({ text: msg });
-        return;
-      } catch (err) {
-        // user cancelou ou erro — segue pro plan B
-      }
-    }
-
-    // 2) Desktop e fallback mobile: copia + abre DM
+    // 1. copia a mensagem (tanto no mobile quanto no desktop)
     const ok = await copyToClipboard(msg);
     if (!ok) {
       window.prompt("Copie a mensagem abaixo e cole no DM:", msg);
@@ -87,6 +70,10 @@ export default function CartDrawer() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }
+
+    // 2. abre o DM da Vince Kids
+    //    no mobile com app do Insta instalado, abre o app direto na thread
+    //    no desktop / sem app, abre instagram.com/direct/...
     window.open(INSTAGRAM_DM_URL, "_blank", "noopener");
   };
 
@@ -214,7 +201,7 @@ export default function CartDrawer() {
                 )}
               </Button>
               <p className="text-[11px] text-muted-foreground text-center">
-                A mensagem do pedido é copiada e o DM da Vince Kids abre numa nova aba. Cole no chat.
+                A mensagem é copiada e o DM da Vince Kids abre numa nova aba. Cole no chat.
               </p>
               <button
                 onClick={clear}
