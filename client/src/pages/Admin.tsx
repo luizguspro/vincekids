@@ -31,6 +31,10 @@ import { cn } from "@/lib/utils";
 
 const SESSION_KEY = "vk_admin_session";
 
+// Senha fallback fixa caso a env var na Netlify esteja errada ou ausente.
+// O admin aceita esta OU a que estiver na VITE_ADMIN_PASSWORD.
+const FALLBACK_PASSWORD = "vince3249";
+
 function slugify(name: string) {
   return name
     .toLowerCase()
@@ -56,7 +60,11 @@ function emptyProduct(): Product {
 }
 
 export default function Admin() {
-  const expected = import.meta.env.VITE_ADMIN_PASSWORD as string | undefined;
+  const envPassword = (import.meta.env.VITE_ADMIN_PASSWORD as string | undefined)?.trim();
+  const validPasswords = [FALLBACK_PASSWORD, envPassword].filter(
+    (p): p is string => Boolean(p && p.length > 0)
+  );
+
   const [, navigate] = useLocation();
   const [authed, setAuthed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -86,12 +94,8 @@ export default function Admin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!expected) {
-      setAuthed(true);
-      window.sessionStorage.setItem(SESSION_KEY, "1");
-      return;
-    }
-    if (password === expected) {
+    const typed = password.trim();
+    if (validPasswords.includes(typed)) {
       setAuthed(true);
       setLoginError(null);
       window.sessionStorage.setItem(SESSION_KEY, "1");
@@ -150,8 +154,7 @@ export default function Admin() {
     }
     try {
       persist(next);
-    } catch (err) {
-      // localStorage tem ~5MB. Se estourou, imagens muito grandes.
+    } catch {
       setFeedback(
         "Não coube no storage. Reduza a galeria ou diminua a qualidade das fotos."
       );
@@ -212,14 +215,9 @@ export default function Admin() {
                   onChange={(e) => setPassword(e.target.value)}
                   autoFocus
                   className="w-full px-4 py-3 rounded-xl border border-border bg-white focus:outline-none focus:border-primary"
-                  placeholder={expected ? "Digite a senha" : "Sem senha configurada (entrar)"}
+                  placeholder="Digite a senha"
                 />
                 {loginError && <p className="text-sm text-destructive">{loginError}</p>}
-                {!expected && (
-                  <p className="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                    Nenhuma <code>VITE_ADMIN_PASSWORD</code> configurada no .env. Qualquer um pode entrar.
-                  </p>
-                )}
                 <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-full h-11">
                   Entrar
                 </Button>
@@ -283,7 +281,7 @@ export default function Admin() {
           <p className="text-muted-foreground">
             As alterações ficam salvas só neste navegador. Pra publicar: clique <b>Exportar JSON</b>,
             abra o arquivo baixado, cole o conteúdo em <code>client/src/data/products.ts</code>
-            (substituindo o array <code>DEFAULT_PRODUCTS</code>) e dê push no git. A Vercel re-deploya sozinha.
+            (substituindo o array <code>DEFAULT_PRODUCTS</code>) e dê push no git. A Netlify re-deploya sozinha.
           </p>
         </div>
 
