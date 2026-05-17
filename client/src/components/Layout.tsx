@@ -1,7 +1,15 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import {
+  ShoppingBag,
+  Menu,
+  X,
+  Home as HomeIcon,
+  Shirt,
+  Settings,
+  Instagram,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import CartDrawer from "./CartDrawer";
@@ -10,10 +18,18 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-const NAV = [
-  { href: "/", label: "Início" },
-  { href: "/colecao", label: "Coleção" },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof HomeIcon;
+}
+
+const NAV: NavItem[] = [
+  { href: "/", label: "Início", icon: HomeIcon },
+  { href: "/colecao", label: "Coleção", icon: Shirt },
 ];
+
+const INSTAGRAM_URL = "https://instagram.com/vince_kids";
 
 export default function Layout({ children }: LayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -101,6 +117,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
 
+        {/* Drawer mobile */}
         <div
           className={cn(
             "md:hidden fixed inset-0 z-50 transition-opacity",
@@ -109,52 +126,129 @@ export default function Layout({ children }: LayoutProps) {
         >
           <button
             aria-label="Fechar menu"
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
           />
-          <div
+          <aside
             className={cn(
-              "absolute top-0 left-0 h-full w-[80%] max-w-xs bg-white shadow-2xl flex flex-col transition-transform duration-300",
+              "absolute top-0 left-0 h-full w-[85%] max-w-[340px] bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out",
               menuOpen ? "translate-x-0" : "-translate-x-full"
             )}
           >
-            <div className="flex items-center justify-between h-16 px-4 border-b border-border/40">
-              <span className="font-display text-2xl text-primary">Menu</span>
+            {/* Header com logo */}
+            <div className="bg-gradient-to-br from-primary/10 via-secondary/10 to-transparent p-5 pb-6 relative">
               <button
                 onClick={() => setMenuOpen(false)}
-                className="p-2 rounded-full hover:bg-muted text-foreground/70"
+                className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white text-foreground/70 hover:text-foreground shadow-sm"
                 aria-label="Fechar menu"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
+              <div className="flex items-center gap-3">
+                <img
+                  src="/images/boy-blocks-icon.png"
+                  alt="Vince Kids"
+                  className="h-12 w-auto"
+                />
+                <div className="flex flex-col">
+                  <span className="font-display text-2xl text-primary leading-none">
+                    Vince Kids
+                  </span>
+                  <span className="text-[10px] text-muted-foreground tracking-widest uppercase font-bold mt-1">
+                    Moda para Meninos
+                  </span>
+                </div>
+              </div>
             </div>
-            <nav className="flex-1 p-4 flex flex-col gap-1">
-              {NAV.map((n) => {
-                const active = location === n.href;
-                return (
-                  <Link key={n.href} href={n.href}>
+
+            {/* Navegação principal */}
+            <nav className="flex-1 overflow-y-auto px-3 py-4">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70 px-3 mb-2">
+                Loja
+              </p>
+              <ul className="space-y-1">
+                {NAV.map((n) => {
+                  const active = location === n.href;
+                  const Icon = n.icon;
+                  return (
+                    <li key={n.href}>
+                      <Link href={n.href}>
+                        <span
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-base cursor-pointer transition-colors",
+                            active
+                              ? "bg-primary/10 text-primary"
+                              : "text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <Icon className="h-5 w-5 shrink-0" />
+                          {n.label}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+                <li>
+                  <button
+                    onClick={() => {
+                      cart.open();
+                      setMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-base text-foreground hover:bg-muted transition-colors"
+                  >
+                    <ShoppingBag className="h-5 w-5 shrink-0" />
+                    Carrinho
+                    {cart.count > 0 && (
+                      <span className="ml-auto bg-secondary text-secondary-foreground text-xs font-bold rounded-full px-2 py-0.5">
+                        {cart.count}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              </ul>
+
+              <div className="my-4 border-t border-border/40" />
+
+              <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70 px-3 mb-2">
+                Gestão
+              </p>
+              <ul className="space-y-1">
+                <li>
+                  <Link href="/admin">
                     <span
                       className={cn(
-                        "block px-4 py-3 rounded-xl font-bold text-base cursor-pointer transition-colors",
-                        active
+                        "flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-base cursor-pointer transition-colors",
+                        location === "/admin"
                           ? "bg-primary/10 text-primary"
                           : "text-foreground hover:bg-muted"
                       )}
                     >
-                      {n.label}
+                      <Settings className="h-5 w-5 shrink-0" />
+                      Sistema
                     </span>
                   </Link>
-                );
-              })}
+                </li>
+              </ul>
             </nav>
-            <div className="p-4 border-t border-border/40">
+
+            {/* Rodapé do drawer */}
+            <div className="p-4 border-t border-border/40 space-y-3 bg-[#FDFDFD]">
               <Link href="/colecao">
-                <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold rounded-xl">
+                <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold rounded-xl h-11">
                   Ver Coleção
                 </Button>
               </Link>
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary font-bold"
+              >
+                <Instagram className="h-4 w-4" />
+                @vince_kids
+              </a>
             </div>
-          </div>
+          </aside>
         </div>
       </header>
 
@@ -175,20 +269,13 @@ export default function Layout({ children }: LayoutProps) {
               </p>
               <div className="flex gap-3 sm:gap-4">
                 <a
-                  href="https://instagram.com/vince_kids"
+                  href={INSTAGRAM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary-foreground hover:bg-secondary/40 transition-colors"
                   aria-label="Instagram"
                 >
-                  <span className="font-display text-lg">Ig</span>
-                </a>
-                <a
-                  href="#"
-                  className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary hover:bg-primary/40 transition-colors"
-                  aria-label="Facebook"
-                >
-                  <span className="font-display text-lg">Fb</span>
+                  <Instagram className="h-5 w-5" />
                 </a>
               </div>
             </div>
@@ -203,6 +290,13 @@ export default function Layout({ children }: LayoutProps) {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <Link href="/admin">
+                    <span className="hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1">
+                      <Settings className="h-3 w-3" /> Sistema
+                    </span>
+                  </Link>
+                </li>
               </ul>
             </div>
 
