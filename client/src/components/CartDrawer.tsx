@@ -1,25 +1,12 @@
-import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
-import {
-  ArrowRight,
-  Check,
-  Copy,
-  Instagram,
-  Minus,
-  Plus,
-  ShoppingBag,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart, type CartItem } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
 
-// Perfil público da Vince Kids no Instagram.
-// Usamos o perfil em vez do link /direct/t/... porque o link de DM
-// só funciona pra quem já tem conversa aberta com a conta.
-// No perfil, qualquer pessoa toca em "Mensagem" e abre o DM.
-const INSTAGRAM_PROFILE_URL = "https://www.instagram.com/vince_kids/";
+// WhatsApp da Vince Kids. Formato internacional sem + ou espaços.
+// 55 (Brasil) + 48 (Florianópolis) + 991794625
+const WHATSAPP_NUMBER = "5548991794625";
 
 function formatPrice(n: number) {
   return "R$ " + n.toFixed(2).replace(".", ",");
@@ -47,284 +34,155 @@ function buildOrderMessage(items: CartItem[], total: number) {
   ].join("\n");
 }
 
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.top = "-1000px";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return ok;
-    } catch {
-      return false;
-    }
-  }
+function buildWhatsappUrl(items: CartItem[], total: number) {
+  const text = encodeURIComponent(buildOrderMessage(items, total));
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+}
+
+// Ícone do WhatsApp como SVG inline (lucide não tem)
+function WhatsappIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0 0 20.464 3.488" />
+    </svg>
+  );
 }
 
 export default function CartDrawer() {
   const cart = useCart();
   const { isOpen, close, items, total, setQty, remove, clear } = cart;
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const message = buildOrderMessage(items, total);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (!showCheckout) setCopied(false);
-  }, [showCheckout]);
-
-  const handleCopy = async () => {
-    const ok = await copyToClipboard(message);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } else {
-      textareaRef.current?.select();
-    }
-  };
-
-  const handleOpenInstagram = async () => {
-    await copyToClipboard(message);
-    window.open(INSTAGRAM_PROFILE_URL, "_blank", "noopener");
+  const handleCheckout = () => {
+    if (items.length === 0) return;
+    window.open(buildWhatsappUrl(items, total), "_blank", "noopener");
   };
 
   return (
-    <>
-      <div
+    <div
+      className={cn(
+        "fixed inset-0 z-[60] transition-opacity",
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      )}
+      aria-hidden={!isOpen}
+    >
+      <button
+        type="button"
+        aria-label="Fechar carrinho"
+        className="absolute inset-0 bg-black/50"
+        onClick={close}
+      />
+      <aside
         className={cn(
-          "fixed inset-0 z-[60] transition-opacity",
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          "absolute top-0 right-0 h-full w-full sm:w-[420px] max-w-full bg-white shadow-2xl flex flex-col transition-transform duration-300",
+          isOpen ? "translate-x-0" : "translate-x-full"
         )}
-        aria-hidden={!isOpen}
+        role="dialog"
+        aria-label="Carrinho"
       >
-        <button
-          type="button"
-          aria-label="Fechar carrinho"
-          className="absolute inset-0 bg-black/50"
-          onClick={close}
-        />
-        <aside
-          className={cn(
-            "absolute top-0 right-0 h-full w-full sm:w-[420px] max-w-full bg-white shadow-2xl flex flex-col transition-transform duration-300",
-            isOpen ? "translate-x-0" : "translate-x-full"
-          )}
-          role="dialog"
-          aria-label="Carrinho"
-        >
-          <header className="flex items-center justify-between h-16 px-4 sm:px-6 border-b border-border/40 shrink-0">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              <span className="font-display text-xl text-primary">Carrinho</span>
-              <span className="text-sm text-muted-foreground">({cart.count})</span>
-            </div>
-            <button
-              onClick={close}
-              className="p-2 rounded-full hover:bg-muted text-foreground/70"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </header>
+        <header className="flex items-center justify-between h-16 px-4 sm:px-6 border-b border-border/40 shrink-0">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5 text-primary" />
+            <span className="font-display text-xl text-primary">Carrinho</span>
+            <span className="text-sm text-muted-foreground">({cart.count})</span>
+          </div>
+          <button
+            onClick={close}
+            className="p-2 rounded-full hover:bg-muted text-foreground/70"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
 
-          {items.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground/40" />
-              <p className="text-muted-foreground">Seu carrinho está vazio.</p>
-              <Link href="/colecao">
-                <Button onClick={close} className="bg-primary hover:bg-primary/90 rounded-full">
-                  Ver coleção
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <>
-              <ul className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
-                {items.map((i) => (
-                  <li
-                    key={i.productId + "-" + i.size}
-                    className="flex gap-3 bg-[#FDFDFD] border border-border/40 rounded-2xl p-3"
-                  >
-                    <img
-                      src={i.image}
-                      alt={i.name}
-                      className="w-20 h-20 object-cover rounded-xl bg-muted shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between gap-2">
-                        <p className="font-bold text-sm sm:text-base line-clamp-2">{i.name}</p>
+        {items.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
+            <ShoppingBag className="h-12 w-12 text-muted-foreground/40" />
+            <p className="text-muted-foreground">Seu carrinho está vazio.</p>
+            <Link href="/colecao">
+              <Button onClick={close} className="bg-primary hover:bg-primary/90 rounded-full">
+                Ver coleção
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <>
+            <ul className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
+              {items.map((i) => (
+                <li
+                  key={i.productId + "-" + i.size}
+                  className="flex gap-3 bg-[#FDFDFD] border border-border/40 rounded-2xl p-3"
+                >
+                  <img
+                    src={i.image}
+                    alt={i.name}
+                    className="w-20 h-20 object-cover rounded-xl bg-muted shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between gap-2">
+                      <p className="font-bold text-sm sm:text-base line-clamp-2">{i.name}</p>
+                      <button
+                        onClick={() => remove(i.productId, i.size)}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        aria-label="Remover item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Tamanho {i.size}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-1 border border-border rounded-full">
                         <button
-                          onClick={() => remove(i.productId, i.size)}
-                          className="text-muted-foreground hover:text-destructive shrink-0"
-                          aria-label="Remover item"
+                          onClick={() => setQty(i.productId, i.size, i.qty - 1)}
+                          disabled={i.qty <= 1}
+                          className="p-1.5 disabled:opacity-30 hover:text-primary"
+                          aria-label="Diminuir"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-6 text-center text-sm font-bold">{i.qty}</span>
+                        <button
+                          onClick={() => setQty(i.productId, i.size, i.qty + 1)}
+                          className="p-1.5 hover:text-primary"
+                          aria-label="Aumentar"
+                        >
+                          <Plus className="h-3 w-3" />
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground">Tamanho {i.size}</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <div className="flex items-center gap-1 border border-border rounded-full">
-                          <button
-                            onClick={() => setQty(i.productId, i.size, i.qty - 1)}
-                            disabled={i.qty <= 1}
-                            className="p-1.5 disabled:opacity-30 hover:text-primary"
-                            aria-label="Diminuir"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="w-6 text-center text-sm font-bold">{i.qty}</span>
-                          <button
-                            onClick={() => setQty(i.productId, i.size, i.qty + 1)}
-                            className="p-1.5 hover:text-primary"
-                            aria-label="Aumentar"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <span className="font-bold text-primary text-sm sm:text-base">
-                          {formatPrice(i.price * i.qty)}
-                        </span>
-                      </div>
+                      <span className="font-bold text-primary text-sm sm:text-base">
+                        {formatPrice(i.price * i.qty)}
+                      </span>
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </li>
+              ))}
+            </ul>
 
-              <footer className="border-t border-border/40 p-4 sm:p-6 space-y-3 shrink-0 bg-white">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-muted-foreground">Total</span>
-                  <span className="text-2xl font-display text-primary">{formatPrice(total)}</span>
-                </div>
-                <Button
-                  onClick={() => setShowCheckout(true)}
-                  className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full h-12 font-bold text-base"
-                >
-                  Finalizar pedido
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-                <button
-                  onClick={clear}
-                  className="w-full text-xs text-muted-foreground hover:text-destructive"
-                >
-                  Limpar carrinho
-                </button>
-              </footer>
-            </>
-          )}
-        </aside>
-      </div>
-
-      {/* Modal de checkout */}
-      <div
-        className={cn(
-          "fixed inset-0 z-[80] flex items-end sm:items-center justify-center transition-opacity",
-          showCheckout ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            <footer className="border-t border-border/40 p-4 sm:p-6 space-y-3 shrink-0 bg-white">
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-2xl font-display text-primary">{formatPrice(total)}</span>
+              </div>
+              <Button
+                onClick={handleCheckout}
+                className="w-full bg-[#25D366] hover:bg-[#1ebe57] text-white rounded-full h-12 font-bold text-base shadow-md hover:shadow-lg transition"
+              >
+                <WhatsappIcon className="h-5 w-5" />
+                Finalizar pedido no WhatsApp
+              </Button>
+              <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+                Abre o WhatsApp na conversa com a Vince Kids com a mensagem pronta. Você só clica em
+                enviar.
+              </p>
+              <button
+                onClick={clear}
+                className="w-full text-xs text-muted-foreground hover:text-destructive"
+              >
+                Limpar carrinho
+              </button>
+            </footer>
+          </>
         )}
-        aria-hidden={!showCheckout}
-      >
-        <button
-          type="button"
-          className="absolute inset-0 bg-black/60"
-          onClick={() => setShowCheckout(false)}
-          aria-label="Fechar"
-        />
-        <div
-          className={cn(
-            "relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] transition-transform duration-300",
-            showCheckout ? "translate-y-0" : "translate-y-full sm:translate-y-0"
-          )}
-        >
-          <header className="flex items-center justify-between p-4 sm:p-6 border-b border-border/40 shrink-0">
-            <div>
-              <h2 className="font-display text-2xl text-primary">Finalizar no Instagram</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                2 passos: copiar a mensagem → colar no DM
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCheckout(false)}
-              className="p-2 rounded-full hover:bg-muted text-foreground/70"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </header>
-
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            {/* Passo 1 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
-                  1
-                </span>
-                <span className="font-bold text-foreground">Copie a mensagem do pedido</span>
-              </div>
-              <textarea
-                ref={textareaRef}
-                readOnly
-                value={message}
-                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                className="w-full text-xs sm:text-sm font-mono bg-[#FDFDFD] border border-border rounded-xl p-3 h-44 sm:h-52 resize-none focus:outline-none focus:border-primary"
-              />
-              <Button
-                onClick={handleCopy}
-                className={cn(
-                  "w-full mt-2 rounded-full h-11 font-bold transition",
-                  copied
-                    ? "bg-emerald-600 hover:bg-emerald-600 text-white"
-                    : "bg-primary hover:bg-primary/90 text-white"
-                )}
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4" /> Copiado!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" /> Copiar mensagem
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Passo 2 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
-                  2
-                </span>
-                <span className="font-bold text-foreground">Abra o perfil e mande mensagem</span>
-              </div>
-              <Button
-                onClick={handleOpenInstagram}
-                className="w-full rounded-full h-12 font-bold text-base bg-gradient-to-r from-[#E1306C] via-[#C13584] to-[#833AB4] text-white hover:opacity-90"
-              >
-                <Instagram className="h-5 w-5" />
-                Abrir perfil @vince_kids
-              </Button>
-              <p className="text-[11px] text-muted-foreground text-center mt-2 leading-relaxed">
-                No perfil, toque em <b>Mensagem</b>. No campo de texto, toque longo e escolha{" "}
-                <b>Colar</b>.
-              </p>
-            </div>
-          </div>
-
-          <footer className="p-4 sm:p-6 border-t border-border/40 shrink-0">
-            <button
-              onClick={() => setShowCheckout(false)}
-              className="w-full text-sm text-muted-foreground hover:text-foreground"
-            >
-              Voltar pro carrinho
-            </button>
-          </footer>
-        </div>
-      </div>
-    </>
+      </aside>
+    </div>
   );
 }
